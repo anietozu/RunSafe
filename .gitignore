@@ -1,0 +1,29 @@
+# Compilación (nunca subir)
+target/
+*.jar
+*.war
+*.class
+
+# Secretos locales (nunca subir)
+.env
+.env.*
+application-local.yml
+application-prod.yml
+*.pem
+*.p12
+*.jks
+
+# IDE / sistema
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+.DS_Store
+*.log
+
+# Maven
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+help.md
