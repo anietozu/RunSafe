@@ -69,4 +69,15 @@ public class AuthService {
         }
         return new AuthResponse(jwtService.generate(u.getId(), u.getLogin()), UsuarioResponse.from(u));
     }
+
+    @Transactional
+    public void actualizarPassword(RecuperarPasswordRequest req) {
+        Usuario u = usuarios.findByEmailIgnoreCase(req.email().trim())
+                .orElseThrow(() -> new ApiException("No hay ninguna cuenta con ese email"));
+        if (!Boolean.TRUE.equals(u.getActivo())) {
+            throw new ApiException("La cuenta no está activa");
+        }
+        u.setPassword(encoder.encode(req.password()));
+        usuarios.save(u);
+    }
 }

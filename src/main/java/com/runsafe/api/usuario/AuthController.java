@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api")
 @Tag(name = "Usuarios")
@@ -36,6 +38,13 @@ public class AuthController {
     @Operation(summary = "Iniciar sesión con email o login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    @PutMapping("/auth/password")
+    @Operation(summary = "Actualizar contraseña con el email de la cuenta")
+    public Map<String, String> actualizarPassword(@Valid @RequestBody RecuperarPasswordRequest request) {
+        authService.actualizarPassword(request);
+        return Map.of("ok", "true");
     }
 
     @GetMapping("/usuarios/me")

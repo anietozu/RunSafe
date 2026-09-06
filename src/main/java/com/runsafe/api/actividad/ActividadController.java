@@ -39,7 +39,7 @@ public class ActividadController {
 
     @GetMapping("/actividades/{id}")
     public ActividadResponse detalle(@PathVariable Long id) {
-        Actividad a = actividades.findById(id).orElseThrow(() -> new ApiException("Actividad no encontrada"));
+        Actividad a = actividades.findWithPuntosById(id).orElseThrow(() -> new ApiException("Actividad no encontrada"));
         return ActividadResponse.from(a, true);
     }
 
