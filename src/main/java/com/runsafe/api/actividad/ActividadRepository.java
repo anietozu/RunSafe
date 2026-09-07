@@ -14,4 +14,7 @@ public interface ActividadRepository extends JpaRepository<Actividad, Long> {
 
     @Query("select distinct a from Actividad a left join fetch a.puntos where a.id = :id")
     Optional<Actividad> findWithPuntosById(@Param("id") Long id);
+
+    @Query("select a from Actividad a join fetch a.usuario where a.publica = true order by a.fechaInicio desc")
+    List<Actividad> findByPublicaTrueOrderByFechaInicioDesc();
 }

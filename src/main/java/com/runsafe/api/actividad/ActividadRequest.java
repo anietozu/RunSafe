@@ -14,5 +14,6 @@ public record ActividadRequest(
         Double desnivelM,
         Boolean publica,
         String notas,
+        Boolean compartir,
         List<PuntoDto> puntos
 ) {}

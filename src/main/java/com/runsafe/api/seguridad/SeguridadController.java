@@ -80,7 +80,11 @@ public class SeguridadController {
         c.setUsuario(authUser.current());
         c.setNombre(body.getOrDefault("nombre", "Contacto"));
         c.setTelefono(body.getOrDefault("telefono", ""));
-        c.setRelacion(body.get("relacion"));
+        String relacion = trimToNull(body.get("relacion"));
+        if (relacion == null) {
+            throw new ApiException("Indica la relación con el contacto");
+        }
+        c.setRelacion(relacion);
         contactos.save(c);
         return toContacto(c);
     }
@@ -126,5 +130,13 @@ public class SeguridadController {
         m.put("telefono", c.getTelefono());
         m.put("relacion", c.getRelacion());
         return m;
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String t = value.trim();
+        return t.isEmpty() ? null : t;
     }
 }

@@ -28,9 +28,6 @@ public class Usuario {
     @Column(name = "fecha_alta")
     private LocalDateTime fechaAlta;
 
-    @Column(name = "activo_usuario")
-    private Boolean activoUsuario;
-
     @Column(length = 100)
     private String apellidos;
 

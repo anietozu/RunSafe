@@ -1,5 +1,6 @@
 package com.runsafe.api.usuario;
 
+import com.runsafe.api.common.ApiException;
 import com.runsafe.api.security.AuthUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -53,16 +54,24 @@ public class AuthController {
     }
 
     @PutMapping("/usuarios/me")
-    public UsuarioResponse actualizar(@RequestBody RegistroRequest request) {
+    public UsuarioResponse actualizar(@RequestBody ActualizarPerfilRequest request) {
         Usuario u = authUser.current();
-        if (request.nombre() != null) {
-            u.setNombre(request.nombre());
+        if (request.nombre() != null && !request.nombre().isBlank()) {
+            u.setNombre(request.nombre().trim());
         }
         if (request.apellidos() != null) {
-            u.setApellidos(request.apellidos());
+            u.setApellidos(request.apellidos().trim());
+        }
+        if (request.email() != null && !request.email().isBlank()) {
+            String email = request.email().trim().toLowerCase();
+            if (!email.equalsIgnoreCase(u.getEmail()) && usuarios.existsByEmailIgnoreCase(email)) {
+                throw new ApiException("Ese email ya está en uso");
+            }
+            u.setEmail(email);
+            u.setLogin(email);
         }
         if (request.telefono() != null) {
-            u.setTelefono(request.telefono());
+            u.setTelefono(request.telefono().trim());
         }
         return UsuarioResponse.from(usuarios.save(u));
     }

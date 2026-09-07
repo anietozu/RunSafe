@@ -4,6 +4,12 @@ import com.runsafe.api.common.ApiException;
 import com.runsafe.api.security.AuthUser;
 import com.runsafe.api.usuario.Usuario;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.runsafe.api.social.ComentarioRepository;
+import com.runsafe.api.social.MeGustaRepository;
+import com.runsafe.api.social.Publicacion;
+import com.runsafe.api.social.PublicacionRepository;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,26 +30,56 @@ import java.util.Map;
 public class ActividadController {
 
     private final ActividadRepository actividades;
+    private final PublicacionRepository publicaciones;
+    private final MeGustaRepository likes;
+    private final ComentarioRepository comentarios;
     private final AuthUser authUser;
 
-    public ActividadController(ActividadRepository actividades, AuthUser authUser) {
+    public ActividadController(
+            ActividadRepository actividades,
+            PublicacionRepository publicaciones,
+            MeGustaRepository likes,
+            ComentarioRepository comentarios,
+            AuthUser authUser
+    ) {
         this.actividades = actividades;
+        this.publicaciones = publicaciones;
+        this.likes = likes;
+        this.comentarios = comentarios;
         this.authUser = authUser;
     }
 
     @GetMapping("/actividades")
+    @Transactional(readOnly = true)
     public List<ActividadResponse> listar() {
         return actividades.findByUsuarioIdOrderByFechaInicioDesc(authUser.current().getId())
                 .stream().map(a -> ActividadResponse.from(a, false)).toList();
     }
 
     @GetMapping("/actividades/{id}")
+    @Transactional(readOnly = true)
     public ActividadResponse detalle(@PathVariable Long id) {
         Actividad a = actividades.findWithPuntosById(id).orElseThrow(() -> new ApiException("Actividad no encontrada"));
+        if (!a.getUsuario().getId().equals(authUser.current().getId()) && !Boolean.TRUE.equals(a.getPublica())) {
+            throw new ApiException("Actividad no encontrada");
+        }
         return ActividadResponse.from(a, true);
     }
 
+    @DeleteMapping("/actividades/{id}")
+    @Transactional
+    public Map<String, Boolean> borrar(@PathVariable Long id) {
+        return eliminarActividad(id);
+    }
+
+    @PostMapping("/actividades/{id}/eliminar")
+    @Transactional
+    public Map<String, Boolean> borrarPost(@PathVariable Long id) {
+        return eliminarActividad(id);
+    }
+
     @PostMapping("/actividades")
+    @Transactional
     public ActividadResponse guardar(@RequestBody ActividadRequest req) {
         Usuario u = authUser.current();
         Actividad a = new Actividad();
@@ -57,7 +93,8 @@ public class ActividadController {
         a.setVelocidadMedia(nz(req.velocidadMedia()));
         a.setCalorias(req.calorias() == null ? 0 : req.calorias());
         a.setDesnivelM(nz(req.desnivelM()));
-        a.setPublica(req.publica() == null || req.publica());
+        boolean compartir = Boolean.TRUE.equals(req.compartir());
+        a.setPublica(compartir || req.publica() == null || Boolean.TRUE.equals(req.publica()));
         a.setNotas(req.notas());
         if (req.puntos() != null) {
             int i = 0;
@@ -73,10 +110,15 @@ public class ActividadController {
                 a.getPuntos().add(p);
             }
         }
-        return ActividadResponse.from(actividades.save(a), true);
+        Actividad saved = actividades.save(a);
+        if (Boolean.TRUE.equals(saved.getPublica())) {
+            publicarRuta(u, saved);
+        }
+        return ActividadResponse.from(saved, true);
     }
 
     @GetMapping("/estadisticas")
+    @Transactional(readOnly = true)
     public Map<String, Object> estadisticas() {
         Long userId = authUser.current().getId();
         LocalDateTime startWeek = LocalDateTime.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
@@ -104,6 +146,36 @@ public class ActividadController {
         body.put("distanciaPorDiaKm", porDia);
         body.put("totalHistorico", todas.size());
         return body;
+    }
+
+    private Map<String, Boolean> eliminarActividad(Long id) {
+        Actividad a = actividades.findById(id).orElseThrow(() -> new ApiException("Actividad no encontrada"));
+        Long ownerId = a.getUsuario() == null ? null : a.getUsuario().getId();
+        if (ownerId == null || !ownerId.equals(authUser.current().getId())) {
+            throw new ApiException("No puedes eliminar esta actividad");
+        }
+        for (Publicacion p : publicaciones.findByActividadId(id)) {
+            likes.deleteByPublicacionId(p.getId());
+            comentarios.deleteByPublicacionId(p.getId());
+            publicaciones.delete(p);
+        }
+        publicaciones.flush();
+        actividades.delete(a);
+        actividades.flush();
+        return Map.of("ok", true);
+    }
+
+    private void publicarRuta(Usuario u, Actividad saved) {
+        if (publicaciones.existsByUsuarioIdAndActividadId(u.getId(), saved.getId())) {
+            return;
+        }
+        Publicacion p = new Publicacion();
+        p.setUsuario(u);
+        p.setActividad(saved);
+        p.setFecha(saved.getFechaFin() == null ? LocalDateTime.now() : saved.getFechaFin());
+        double km = nz(saved.getDistanciaM()) / 1000.0;
+        p.setTexto("He completado " + String.format(java.util.Locale.US, "%.2f", km) + " km.");
+        publicaciones.save(p);
     }
 
     private static double nz(Double v) {

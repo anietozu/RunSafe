@@ -47,7 +47,6 @@ public class AuthService {
         u.setPassword(encoder.encode(req.password()));
         u.setTelefono(req.telefono());
         u.setActivo(true);
-        u.setActivoUsuario(true);
         u.setFechaAlta(LocalDateTime.now());
         usuarios.save(u);
 
