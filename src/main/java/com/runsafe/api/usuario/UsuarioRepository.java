@@ -15,11 +15,17 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     @Query("""
             select u from Usuario u
+            where replace(replace(replace(replace(coalesce(u.telefono, ''), ' ', ''), '-', ''), '(', ''), ')', '') = :tel
+            """)
+    List<Usuario> findAllByTelefonoNorm(@Param("tel") String tel);
+
+    @Query("""
+            select u from Usuario u
             where u.id <> :meId
-              and (lower(coalesce(u.nombre, '')) like lower(concat('%', :q, '%'))
-                   or lower(coalesce(u.apellidos, '')) like lower(concat('%', :q, '%'))
-                   or lower(u.email) like lower(concat('%', :q, '%')))
-            order by u.nombre
+              and (lower(coalesce(u.login, '')) like lower(concat('%', :q, '%'))
+                   or lower(coalesce(u.nombre, '')) like lower(concat('%', :q, '%'))
+                   or lower(coalesce(u.apellidos, '')) like lower(concat('%', :q, '%')))
+            order by u.login
             """)
     List<Usuario> buscarOtros(@Param("meId") Long meId, @Param("q") String q);
 

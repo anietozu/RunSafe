@@ -32,7 +32,10 @@ public class AuthService {
 
     @Transactional
     public AuthResponse registrar(RegistroRequest req) {
-        String login = (req.login() == null || req.login().isBlank()) ? req.email() : req.login();
+        String login = req.login().trim().toLowerCase();
+        if (login.contains("@")) {
+            throw new ApiException("El usuario no puede ser un email");
+        }
         if (usuarios.existsByEmailIgnoreCase(req.email())) {
             throw new ApiException("El email ya está registrado");
         }
@@ -43,9 +46,9 @@ public class AuthService {
         u.setNombre(req.nombre());
         u.setApellidos(req.apellidos());
         u.setEmail(req.email().toLowerCase());
-        u.setLogin(login.toLowerCase());
+        u.setLogin(login);
         u.setPassword(encoder.encode(req.password()));
-        u.setTelefono(req.telefono());
+        u.setTelefono(req.telefono() == null ? null : req.telefono().trim());
         u.setActivo(true);
         u.setFechaAlta(LocalDateTime.now());
         usuarios.save(u);
@@ -60,8 +63,10 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest req) {
-        Usuario u = usuarios.findByEmailIgnoreCase(req.identificador())
-                .or(() -> usuarios.findByLoginIgnoreCase(req.identificador()))
+        String id = req.identificador().trim();
+        Usuario u = usuarios.findByLoginIgnoreCase(id)
+                .or(() -> usuarios.findByEmailIgnoreCase(id))
+                .or(() -> usuarios.findAllByTelefonoNorm(normPhone(id)).stream().findFirst())
                 .orElseThrow(() -> new ApiException("Credenciales incorrectas"));
         if (!Boolean.TRUE.equals(u.getActivo()) || !encoder.matches(req.password(), u.getPassword())) {
             throw new ApiException("Credenciales incorrectas");
@@ -71,12 +76,22 @@ public class AuthService {
 
     @Transactional
     public void actualizarPassword(RecuperarPasswordRequest req) {
-        Usuario u = usuarios.findByEmailIgnoreCase(req.email().trim())
-                .orElseThrow(() -> new ApiException("No hay ninguna cuenta con ese email"));
+        var found = usuarios.findAllByTelefonoNorm(normPhone(req.telefono()));
+        if (found.isEmpty()) {
+            throw new ApiException("No hay ninguna cuenta con ese teléfono");
+        }
+        if (found.size() > 1) {
+            throw new ApiException("Hay varias cuentas con ese teléfono");
+        }
+        Usuario u = found.get(0);
         if (!Boolean.TRUE.equals(u.getActivo())) {
             throw new ApiException("La cuenta no está activa");
         }
         u.setPassword(encoder.encode(req.password()));
         usuarios.save(u);
+    }
+
+    static String normPhone(String value) {
+        return value == null ? "" : value.replaceAll("[\\s\\-()]", "");
     }
 }

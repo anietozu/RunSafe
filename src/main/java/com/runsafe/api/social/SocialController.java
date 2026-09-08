@@ -81,6 +81,15 @@ public class SocialController {
         return found.stream().limit(40).map(u -> toUser(u, me.getId())).toList();
     }
 
+    @GetMapping("/siguiendo")
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> siguiendo() {
+        Usuario me = authUser.current();
+        return seguidores.findBySeguidorId(me.getId()).stream()
+                .map(s -> toUser(s.getSeguido(), me.getId()))
+                .toList();
+    }
+
     @PostMapping("/publicaciones")
     @Transactional
     public Map<String, Object> publicar(@RequestBody Map<String, Object> body) {
@@ -135,6 +144,7 @@ public class SocialController {
             m.put("fecha", c.getFecha());
             m.put("usuarioId", c.getUsuario().getId());
             m.put("nombre", c.getUsuario().getNombre());
+            m.put("login", c.getUsuario().getLogin());
             return m;
         }).toList();
     }
@@ -155,7 +165,14 @@ public class SocialController {
         c.setTexto(texto);
         c.setFecha(LocalDateTime.now());
         comentarios.save(c);
-        return toPost(p, me.getId());
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", c.getId());
+        m.put("texto", c.getTexto());
+        m.put("fecha", c.getFecha());
+        m.put("usuarioId", me.getId());
+        m.put("nombre", me.getNombre());
+        m.put("login", me.getLogin());
+        return m;
     }
 
     @PostMapping("/seguir/{userId}")
@@ -204,6 +221,7 @@ public class SocialController {
     private Map<String, Object> toUser(Usuario u, Long meId) {
         Map<String, Object> m = new HashMap<>();
         m.put("id", u.getId());
+        m.put("login", u.getLogin());
         m.put("nombre", u.getNombre());
         m.put("apellidos", u.getApellidos());
         m.put("email", u.getEmail());
@@ -218,6 +236,7 @@ public class SocialController {
         m.put("fecha", p.getFecha());
         m.put("usuarioId", p.getUsuario().getId());
         m.put("nombre", p.getUsuario().getNombre());
+        m.put("login", p.getUsuario().getLogin());
         m.put("likes", likes.countByPublicacionId(p.getId()));
         m.put("comentarios", comentarios.countByPublicacionId(p.getId()));
         m.put("liked", likes.findByPublicacionIdAndUsuarioId(p.getId(), meId).isPresent());
@@ -228,6 +247,7 @@ public class SocialController {
             m.put("actividadId", a.getId());
             m.put("tipo", a.getTipo());
             m.put("distanciaM", a.getDistanciaM());
+            m.put("duracionS", a.getDuracionS());
             m.put("ruta", a.getPuntos() == null ? List.of() : a.getPuntos().stream()
                     .map(pt -> new PuntoDto(pt.getLatitud(), pt.getLongitud(), pt.getAltitud(), pt.getVelocidad(), pt.getTimestampPunto()))
                     .toList());

@@ -36,13 +36,13 @@ public class AuthController {
     }
 
     @PostMapping("/auth/login")
-    @Operation(summary = "Iniciar sesión con email o login")
+    @Operation(summary = "Iniciar sesión con usuario, email o teléfono")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
     }
 
     @PutMapping("/auth/password")
-    @Operation(summary = "Actualizar contraseña con el email de la cuenta")
+    @Operation(summary = "Actualizar contraseña con el teléfono de la cuenta")
     public Map<String, String> actualizarPassword(@Valid @RequestBody RecuperarPasswordRequest request) {
         authService.actualizarPassword(request);
         return Map.of("ok", "true");
@@ -68,7 +68,6 @@ public class AuthController {
                 throw new ApiException("Ese email ya está en uso");
             }
             u.setEmail(email);
-            u.setLogin(email);
         }
         if (request.telefono() != null) {
             u.setTelefono(request.telefono().trim());
