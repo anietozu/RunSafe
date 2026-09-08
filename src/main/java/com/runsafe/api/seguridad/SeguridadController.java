@@ -89,6 +89,16 @@ public class SeguridadController {
         return toContacto(c);
     }
 
+    @PutMapping("/contactos-emergencia/{id}")
+    public Map<String, Object> actualizarContacto(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return guardarContacto(id, body);
+    }
+
+    @PostMapping("/contactos-emergencia/{id}")
+    public Map<String, Object> actualizarContactoPost(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return guardarContacto(id, body);
+    }
+
     @DeleteMapping("/contactos-emergencia/{id}")
     public Map<String, Boolean> borrar(@PathVariable Long id) {
         ContactoEmergencia c = contactos.findById(id).orElseThrow(() -> new ApiException("Contacto no encontrado"));
@@ -97,6 +107,36 @@ public class SeguridadController {
         }
         contactos.delete(c);
         return Map.of("ok", true);
+    }
+
+    private Map<String, Object> guardarContacto(Long id, Map<String, String> body) {
+        ContactoEmergencia c = contactos.findById(id).orElseThrow(() -> new ApiException("Contacto no encontrado"));
+        if (!c.getUsuario().getId().equals(authUser.current().getId())) {
+            throw new ApiException("No autorizado");
+        }
+        if (body.containsKey("nombre")) {
+            String nombre = trimToNull(body.get("nombre"));
+            if (nombre == null) {
+                throw new ApiException("El nombre es obligatorio");
+            }
+            c.setNombre(nombre);
+        }
+        if (body.containsKey("telefono")) {
+            String telefono = trimToNull(body.get("telefono"));
+            if (telefono == null) {
+                throw new ApiException("El teléfono es obligatorio");
+            }
+            c.setTelefono(telefono);
+        }
+        if (body.containsKey("relacion")) {
+            String relacion = trimToNull(body.get("relacion"));
+            if (relacion == null) {
+                throw new ApiException("Indica la relación con el contacto");
+            }
+            c.setRelacion(relacion);
+        }
+        contactos.save(c);
+        return toContacto(c);
     }
 
     @PostMapping("/alertas-sos")
