@@ -217,6 +217,17 @@ public class SocialController {
         return ocultarPublicacion(id);
     }
 
+    @PostMapping("/actividades/{actividadId}/ocultar")
+    @Transactional
+    public Map<String, Boolean> ocultarPorActividad(@PathVariable Long actividadId) {
+        Usuario me = authUser.current();
+        Publicacion mine = publicaciones.findByActividadId(actividadId).stream()
+                .filter(p -> p.getUsuario() != null && p.getUsuario().getId().equals(me.getId()))
+                .findFirst()
+                .orElseThrow(() -> new ApiException("Esta ruta no está publicada"));
+        return ocultarPublicacion(mine.getId());
+    }
+
     private Map<String, Boolean> dejarSeguir(Long userId) {
         Usuario me = authUser.current();
         seguidores.deleteBySeguidorIdAndSeguidoId(me.getId(), userId);
