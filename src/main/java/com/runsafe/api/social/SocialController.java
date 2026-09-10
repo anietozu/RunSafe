@@ -196,9 +196,50 @@ public class SocialController {
     @DeleteMapping("/seguir/{userId}")
     @Transactional
     public Map<String, Boolean> dejarDeSeguir(@PathVariable Long userId) {
+        return dejarSeguir(userId);
+    }
+
+    @PostMapping("/seguir/{userId}/dejar")
+    @Transactional
+    public Map<String, Boolean> dejarDeSeguirPost(@PathVariable Long userId) {
+        return dejarSeguir(userId);
+    }
+
+    @DeleteMapping("/publicaciones/{id}")
+    @Transactional
+    public Map<String, Boolean> borrarPublicacion(@PathVariable Long id) {
+        return ocultarPublicacion(id);
+    }
+
+    @PostMapping("/publicaciones/{id}/eliminar")
+    @Transactional
+    public Map<String, Boolean> borrarPublicacionPost(@PathVariable Long id) {
+        return ocultarPublicacion(id);
+    }
+
+    private Map<String, Boolean> dejarSeguir(Long userId) {
         Usuario me = authUser.current();
         seguidores.deleteBySeguidorIdAndSeguidoId(me.getId(), userId);
         return Map.of("siguiendo", false);
+    }
+
+    private Map<String, Boolean> ocultarPublicacion(Long id) {
+        Usuario me = authUser.current();
+        Publicacion p = publicaciones.findDetailedById(id)
+                .orElseThrow(() -> new ApiException("Publicación no encontrada"));
+        if (!p.getUsuario().getId().equals(me.getId())) {
+            throw new ApiException("Solo puedes eliminar tus publicaciones");
+        }
+        if (p.getActividad() != null) {
+            Actividad a = p.getActividad();
+            a.setPublica(false);
+            actividades.save(a);
+        }
+        likes.deleteByPublicacionId(p.getId());
+        comentarios.deleteByPublicacionId(p.getId());
+        publicaciones.delete(p);
+        publicaciones.flush();
+        return Map.of("ok", true);
     }
 
     private void sincronizarRutasPublicadas() {

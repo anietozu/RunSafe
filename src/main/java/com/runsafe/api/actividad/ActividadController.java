@@ -18,7 +18,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.TemporalAdjusters;
 import java.util.HashMap;
 import java.util.List;
@@ -121,15 +123,16 @@ public class ActividadController {
     @Transactional(readOnly = true)
     public Map<String, Object> estadisticas() {
         Long userId = authUser.current().getId();
-        LocalDateTime startWeek = LocalDateTime.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-                .withHour(0).withMinute(0).withSecond(0).withNano(0);
-        List<Actividad> semana = actividades.findByUsuarioIdAndFechaInicioAfter(userId, startWeek);
+        LocalDateTime startWeek = LocalDate.now(ZoneId.of("Europe/Madrid"))
+                .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                .atStartOfDay();
+        List<Actividad> semana = actividades.findByUsuarioIdAndFechaInicioGreaterThanEqual(userId, startWeek);
         List<Actividad> todas = actividades.findByUsuarioIdOrderByFechaInicioDesc(userId);
 
         double dist = semana.stream().mapToDouble(a -> nz(a.getDistanciaM())).sum();
         int tiempo = semana.stream().mapToInt(a -> a.getDuracionS() == null ? 0 : a.getDuracionS()).sum();
         int calorias = semana.stream().mapToInt(a -> a.getCalorias() == null ? 0 : a.getCalorias()).sum();
-        double vel = semana.isEmpty() ? 0 : semana.stream().mapToDouble(a -> nz(a.getVelocidadMedia())).average().orElse(0);
+        double vel = tiempo > 0 ? (dist / 1000.0) / (tiempo / 3600.0) : 0;
 
         double[] porDia = new double[7];
         for (Actividad a : semana) {
