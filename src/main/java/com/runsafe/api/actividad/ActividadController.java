@@ -2,12 +2,12 @@ package com.runsafe.api.actividad;
 
 import com.runsafe.api.common.ApiException;
 import com.runsafe.api.security.AuthUser;
-import com.runsafe.api.usuario.Usuario;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import com.runsafe.api.social.ComentarioRepository;
 import com.runsafe.api.social.MeGustaRepository;
 import com.runsafe.api.social.Publicacion;
 import com.runsafe.api.social.PublicacionRepository;
+import com.runsafe.api.usuario.Usuario;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
