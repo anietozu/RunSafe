@@ -32,4 +32,10 @@ public class ConfiguracionSeguridad {
 
     @Column(name = "gps_durante_actividad", nullable = false)
     private Boolean gpsDuranteActividad = true;
+
+    @Column(name = "sensibilidad_caida")
+    private Integer sensibilidadCaida = 56;
+
+    @Column(name = "analisis_avanzado_caidas")
+    private Boolean analisisAvanzadoCaidas = true;
 }

@@ -52,12 +52,14 @@ public class SeguridadController {
         body.put("protegido", !contactos.findByUsuarioId(me.getId()).isEmpty() && Boolean.TRUE.equals(cfg.getDeteccionCaidas()));
         body.put("deteccionCaidas", cfg.getDeteccionCaidas());
         body.put("gpsDuranteActividad", cfg.getGpsDuranteActividad());
+        body.put("sensibilidadCaida", cfg.getSensibilidadCaida() == null ? 56 : cfg.getSensibilidadCaida());
+        body.put("analisisAvanzadoCaidas", cfg.getAnalisisAvanzadoCaidas() == null || cfg.getAnalisisAvanzadoCaidas());
         body.put("contactos", contactos.findByUsuarioId(me.getId()).stream().map(this::toContacto).toList());
         return body;
     }
 
     @PutMapping("/seguridad")
-    public Map<String, Object> actualizar(@RequestBody Map<String, Boolean> body) {
+    public Map<String, Object> actualizar(@RequestBody Map<String, Object> body) {
         Usuario me = authUser.current();
         ConfiguracionSeguridad cfg = configs.findByUsuarioId(me.getId()).orElseGet(() -> {
             ConfiguracionSeguridad c = new ConfiguracionSeguridad();
@@ -65,10 +67,17 @@ public class SeguridadController {
             return c;
         });
         if (body.containsKey("deteccionCaidas")) {
-            cfg.setDeteccionCaidas(body.get("deteccionCaidas"));
+            cfg.setDeteccionCaidas(asBool(body.get("deteccionCaidas")));
         }
         if (body.containsKey("gpsDuranteActividad")) {
-            cfg.setGpsDuranteActividad(body.get("gpsDuranteActividad"));
+            cfg.setGpsDuranteActividad(asBool(body.get("gpsDuranteActividad")));
+        }
+        if (body.containsKey("analisisAvanzadoCaidas")) {
+            cfg.setAnalisisAvanzadoCaidas(asBool(body.get("analisisAvanzadoCaidas")));
+        }
+        if (body.containsKey("sensibilidadCaida") && body.get("sensibilidadCaida") != null) {
+            int v = (int) Double.parseDouble(body.get("sensibilidadCaida").toString());
+            cfg.setSensibilidadCaida(Math.max(40, Math.min(72, v)));
         }
         configs.save(cfg);
         return estado();
@@ -178,5 +187,12 @@ public class SeguridadController {
         }
         String t = value.trim();
         return t.isEmpty() ? null : t;
+    }
+
+    private static boolean asBool(Object v) {
+        if (v instanceof Boolean b) {
+            return b;
+        }
+        return Boolean.parseBoolean(String.valueOf(v));
     }
 }

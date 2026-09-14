@@ -24,5 +24,116 @@ public class SchemaPatch implements ApplicationRunner {
         } catch (Exception e) {
             log.warn("No se pudo eliminar usuarios.activo_usuario: {}", e.getMessage());
         }
+        String[] ddl = {
+                "ALTER TABLE configuracion_seguridad ADD COLUMN IF NOT EXISTS sensibilidad_caida INTEGER NOT NULL DEFAULT 56",
+                "ALTER TABLE configuracion_seguridad ADD COLUMN IF NOT EXISTS analisis_avanzado_caidas BOOLEAN NOT NULL DEFAULT TRUE",
+                """
+                CREATE TABLE IF NOT EXISTS objetivos (
+                    id              BIGSERIAL PRIMARY KEY,
+                    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    tipo            VARCHAR(30) NOT NULL,
+                    periodo         VARCHAR(20) NOT NULL,
+                    valor           DOUBLE PRECISION NOT NULL,
+                    tipo_actividad  VARCHAR(30),
+                    activo          BOOLEAN NOT NULL DEFAULT TRUE,
+                    fecha_alta      TIMESTAMP(6) NOT NULL DEFAULT NOW()
+                )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS planes_entrenamiento (
+                    id               BIGSERIAL PRIMARY KEY,
+                    usuario_id       BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    nombre           VARCHAR(120) NOT NULL,
+                    tipo_actividad   VARCHAR(30) NOT NULL,
+                    sesiones_semana  INTEGER NOT NULL DEFAULT 3,
+                    km_semana        DOUBLE PRECISION NOT NULL DEFAULT 20,
+                    notas            VARCHAR(500),
+                    activo           BOOLEAN NOT NULL DEFAULT TRUE,
+                    fecha_alta       TIMESTAMP(6) NOT NULL DEFAULT NOW()
+                )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS grupos (
+                    id          BIGSERIAL PRIMARY KEY,
+                    creador_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    nombre      VARCHAR(120) NOT NULL,
+                    descripcion VARCHAR(1000),
+                    fecha_alta  TIMESTAMP(6) NOT NULL DEFAULT NOW()
+                )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS grupo_miembros (
+                    grupo_id    BIGINT NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+                    usuario_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    fecha       TIMESTAMP(6) NOT NULL DEFAULT NOW(),
+                    PRIMARY KEY (grupo_id, usuario_id)
+                )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS retos (
+                    id          BIGSERIAL PRIMARY KEY,
+                    creador_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    grupo_id    BIGINT REFERENCES grupos(id) ON DELETE SET NULL,
+                    titulo      VARCHAR(120) NOT NULL,
+                    metrica     VARCHAR(30) NOT NULL,
+                    objetivo    DOUBLE PRECISION NOT NULL,
+                    fecha_fin   TIMESTAMP(6) NOT NULL,
+                    fecha_alta  TIMESTAMP(6) NOT NULL DEFAULT NOW()
+                )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS reto_inscripciones (
+                    reto_id     BIGINT NOT NULL REFERENCES retos(id) ON DELETE CASCADE,
+                    usuario_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    fecha       TIMESTAMP(6) NOT NULL DEFAULT NOW(),
+                    PRIMARY KEY (reto_id, usuario_id)
+                )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS dispositivos (
+                    id          BIGSERIAL PRIMARY KEY,
+                    usuario_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    nombre      VARCHAR(80) NOT NULL,
+                    tipo        VARCHAR(40) NOT NULL,
+                    modelo      VARCHAR(80),
+                    conectado   BOOLEAN NOT NULL DEFAULT TRUE,
+                    fecha_alta  TIMESTAMP(6) NOT NULL DEFAULT NOW()
+                )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS sincronizacion (
+                    usuario_id     BIGINT PRIMARY KEY REFERENCES usuarios(id) ON DELETE CASCADE,
+                    ultima_sync    TIMESTAMP(6) NOT NULL DEFAULT NOW(),
+                    operaciones    INTEGER NOT NULL DEFAULT 0
+                )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS eventos_grupo (
+                    id              BIGSERIAL PRIMARY KEY,
+                    organizador_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    titulo          VARCHAR(120) NOT NULL,
+                    descripcion     VARCHAR(1000),
+                    tipo            VARCHAR(30) NOT NULL,
+                    fecha_evento    TIMESTAMP(6) NOT NULL,
+                    latitud         DOUBLE PRECISION,
+                    longitud        DOUBLE PRECISION,
+                    punto_encuentro VARCHAR(200)
+                )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS eventos_participantes (
+                    evento_id   BIGINT NOT NULL REFERENCES eventos_grupo(id) ON DELETE CASCADE,
+                    usuario_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    PRIMARY KEY (evento_id, usuario_id)
+                )
+                """
+        };
+        for (String sql : ddl) {
+            try {
+                jdbc.execute(sql);
+            } catch (Exception e) {
+                log.warn("Parche de esquema omitido: {}", e.getMessage());
+            }
+        }
     }
 }
