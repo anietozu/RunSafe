@@ -499,13 +499,11 @@ public class EvolucionStore {
     }
 
     private Map<String, Object> enviarMensaje(String table, String fk, Long ownerId, Long userId, Map<String, Object> body) {
-        String texto = str(body.get("texto"), "").trim();
-        if (texto.isEmpty()) {
+        String raw = str(body.get("texto"), "").trim();
+        if (raw.isEmpty()) {
             throw new ApiException("Escribe un mensaje");
         }
-        if (texto.length() > 1000) {
-            texto = texto.substring(0, 1000);
-        }
+        String texto = raw.length() > 1000 ? raw.substring(0, 1000) : raw;
         Long id = jdbc.queryForObject(
                 "INSERT INTO " + table + " (" + fk + ", usuario_id, texto) VALUES (?, ?, ?) RETURNING id",
                 Long.class, ownerId, userId, texto);
