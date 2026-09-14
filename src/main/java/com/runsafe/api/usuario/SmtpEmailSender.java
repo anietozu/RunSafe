@@ -13,21 +13,67 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Properties;
 
 @Component
 public class SmtpEmailSender implements EmailSender {
 
     private static final Logger log = LoggerFactory.getLogger(SmtpEmailSender.class);
+    private final HttpClient http = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build();
 
     @Override
     public void enviar(String destino, String asunto, String texto) {
+        String webhook = env("MAIL_WEBHOOK_URL", "");
+        if (!webhook.isBlank()) {
+            enviarWebhook(webhook, destino, asunto, texto);
+            return;
+        }
+        enviarSmtp(destino, asunto, texto);
+    }
+
+    private void enviarWebhook(String webhook, String destino, String asunto, String texto) {
+        try {
+            String secret = env("MAIL_WEBHOOK_SECRET", "");
+            String qs = "secret=" + enc(secret)
+                    + "&to=" + enc(destino)
+                    + "&subject=" + enc(asunto)
+                    + "&body=" + enc(texto);
+            String join = webhook.contains("?") ? "&" : "?";
+            HttpRequest req = HttpRequest.newBuilder(URI.create(webhook + join + qs))
+                    .timeout(Duration.ofSeconds(25))
+                    .GET()
+                    .build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+            String body = res.body() == null ? "" : res.body();
+            if (res.statusCode() >= 400 || body.toLowerCase().contains("forbidden")) {
+                log.warn("Webhook email HTTP {}: {}", res.statusCode(), body);
+                throw new ApiException("No se pudo enviar el email. Revisa MAIL_WEBHOOK_URL y MAIL_WEBHOOK_SECRET.");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Webhook email falló: {}", e.getMessage());
+            throw new ApiException("No se pudo enviar el email. Inténtalo más tarde.");
+        }
+    }
+
+    private void enviarSmtp(String destino, String asunto, String texto) {
         String host = env("MAIL_HOST", "smtp.gmail.com");
         String user = env("MAIL_USER", "");
         String pass = env("MAIL_PASSWORD", "").replace(" ", "");
         String from = env("MAIL_FROM", user);
         if (user.isBlank() || pass.isBlank() || from.isBlank()) {
-            throw new ApiException("El envío de email no está configurado. Faltan MAIL_USER y MAIL_PASSWORD.");
+            throw new ApiException("Configura MAIL_WEBHOOK_URL (Gmail por HTTPS). Render bloquea SMTP.");
         }
         Exception last = null;
         for (MailRoute route : routes(host)) {
@@ -43,7 +89,7 @@ public class SmtpEmailSender implements EmailSender {
         }
         String detail = last == null || last.getMessage() == null ? "" : last.getMessage();
         if (detail.toLowerCase().contains("timed out") || detail.toLowerCase().contains("timeout")) {
-            throw new ApiException("No hay salida SMTP desde el servidor. Render a veces bloquea el puerto de Gmail.");
+            throw new ApiException("Render bloquea SMTP. Usa MAIL_WEBHOOK_URL con un script de Google.");
         }
         throw new ApiException("No se pudo enviar el email. Revisa MAIL_USER y MAIL_PASSWORD.");
     }
@@ -89,6 +135,10 @@ public class SmtpEmailSender implements EmailSender {
                 new MailRoute(host, 465, true),
                 new MailRoute(host, 587, false),
         };
+    }
+
+    private static String enc(String value) {
+        return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 
     private static String env(String key, String fallback) {
