@@ -25,33 +25,11 @@ public class SchemaPatch implements ApplicationRunner {
             log.warn("No se pudo eliminar usuarios.activo_usuario: {}", e.getMessage());
         }
         String[] ddl = {
+                "DROP TABLE IF EXISTS objetivos",
+                "DROP TABLE IF EXISTS planes_entrenamiento",
+                "DROP TABLE IF EXISTS dispositivos",
                 "ALTER TABLE configuracion_seguridad ADD COLUMN IF NOT EXISTS sensibilidad_caida INTEGER NOT NULL DEFAULT 56",
                 "ALTER TABLE configuracion_seguridad ADD COLUMN IF NOT EXISTS analisis_avanzado_caidas BOOLEAN NOT NULL DEFAULT TRUE",
-                """
-                CREATE TABLE IF NOT EXISTS objetivos (
-                    id              BIGSERIAL PRIMARY KEY,
-                    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-                    tipo            VARCHAR(30) NOT NULL,
-                    periodo         VARCHAR(20) NOT NULL,
-                    valor           DOUBLE PRECISION NOT NULL,
-                    tipo_actividad  VARCHAR(30),
-                    activo          BOOLEAN NOT NULL DEFAULT TRUE,
-                    fecha_alta      TIMESTAMP(6) NOT NULL DEFAULT NOW()
-                )
-                """,
-                """
-                CREATE TABLE IF NOT EXISTS planes_entrenamiento (
-                    id               BIGSERIAL PRIMARY KEY,
-                    usuario_id       BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-                    nombre           VARCHAR(120) NOT NULL,
-                    tipo_actividad   VARCHAR(30) NOT NULL,
-                    sesiones_semana  INTEGER NOT NULL DEFAULT 3,
-                    km_semana        DOUBLE PRECISION NOT NULL DEFAULT 20,
-                    notas            VARCHAR(500),
-                    activo           BOOLEAN NOT NULL DEFAULT TRUE,
-                    fecha_alta       TIMESTAMP(6) NOT NULL DEFAULT NOW()
-                )
-                """,
                 """
                 CREATE TABLE IF NOT EXISTS grupos (
                     id          BIGSERIAL PRIMARY KEY,
@@ -87,17 +65,6 @@ public class SchemaPatch implements ApplicationRunner {
                     usuario_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
                     fecha       TIMESTAMP(6) NOT NULL DEFAULT NOW(),
                     PRIMARY KEY (reto_id, usuario_id)
-                )
-                """,
-                """
-                CREATE TABLE IF NOT EXISTS dispositivos (
-                    id          BIGSERIAL PRIMARY KEY,
-                    usuario_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-                    nombre      VARCHAR(80) NOT NULL,
-                    tipo        VARCHAR(40) NOT NULL,
-                    modelo      VARCHAR(80),
-                    conectado   BOOLEAN NOT NULL DEFAULT TRUE,
-                    fecha_alta  TIMESTAMP(6) NOT NULL DEFAULT NOW()
                 )
                 """,
                 """
