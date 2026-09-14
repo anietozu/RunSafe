@@ -49,14 +49,14 @@ public class AuthController {
     }
 
     @PostMapping("/auth/password/codigo")
-    @Operation(summary = "Enviar código SMS para recuperar la contraseña")
+    @Operation(summary = "Enviar código por email para recuperar la contraseña")
     public Map<String, String> pedirCodigo(@Valid @RequestBody PedirCodigoRequest request) {
-        recuperacion.pedirCodigo(request.telefono());
+        recuperacion.pedirCodigo(request.login());
         return Map.of("ok", "true");
     }
 
     @PostMapping("/auth/password/restablecer")
-    @Operation(summary = "Validar el código SMS y establecer una contraseña nueva")
+    @Operation(summary = "Validar el código del email y establecer una contraseña nueva")
     public Map<String, String> restablecer(@Valid @RequestBody RestablecerPasswordRequest request) {
         recuperacion.restablecer(request);
         return Map.of("ok", "true");

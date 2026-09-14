@@ -20,23 +20,23 @@ public class RecuperacionPasswordService {
     private final UsuarioRepository usuarios;
     private final RecuperacionPasswordRepository recuperaciones;
     private final PasswordEncoder encoder;
-    private final SmsSender sms;
+    private final EmailSender email;
 
     public RecuperacionPasswordService(
             UsuarioRepository usuarios,
             RecuperacionPasswordRepository recuperaciones,
             PasswordEncoder encoder,
-            SmsSender sms
+            EmailSender email
     ) {
         this.usuarios = usuarios;
         this.recuperaciones = recuperaciones;
         this.encoder = encoder;
-        this.sms = sms;
+        this.email = email;
     }
 
     @Transactional
-    public void pedirCodigo(String telefono) {
-        Usuario u = buscarPorTelefono(telefono);
+    public void pedirCodigo(String login) {
+        Usuario u = buscarPorLogin(login);
         recuperaciones.findFirstByUsuarioIdAndUsadaFalseOrderByFechaAltaDesc(u.getId()).ifPresent(prev -> {
             if (prev.getFechaAlta() != null && prev.getFechaAlta().isAfter(LocalDateTime.now().minusSeconds(REENVIO_SEGUNDOS))) {
                 throw new ApiException("Espera un minuto para pedir otro código");
@@ -53,7 +53,14 @@ public class RecuperacionPasswordService {
         row.setFechaAlta(LocalDateTime.now());
         recuperaciones.save(row);
         try {
-            sms.enviar(toE164(u.getTelefono()), "RunSafe: tu código es " + codigo + ". Caduca en 10 minutos.");
+            email.enviar(
+                    u.getEmail(),
+                    "Código RunSafe para recuperar tu contraseña",
+                    "Hola " + (u.getNombre() == null ? u.getLogin() : u.getNombre()) + ",\n\n"
+                            + "Tu código para restablecer la contraseña es: " + codigo + "\n\n"
+                            + "Caduca en 10 minutos. Si no has pedido este código, ignora este correo.\n\n"
+                            + "RunSafe"
+            );
         } catch (RuntimeException e) {
             row.setUsada(true);
             recuperaciones.save(row);
@@ -63,7 +70,7 @@ public class RecuperacionPasswordService {
 
     @Transactional
     public void restablecer(RestablecerPasswordRequest req) {
-        Usuario u = buscarPorTelefono(req.telefono());
+        Usuario u = buscarPorLogin(req.login());
         RecuperacionPassword row = recuperaciones.findFirstByUsuarioIdAndUsadaFalseOrderByFechaAltaDesc(u.getId())
                 .orElseThrow(() -> new ApiException("Pide un código antes de cambiar la contraseña"));
         if (row.getCaduca() == null || row.getCaduca().isBefore(LocalDateTime.now())) {
@@ -91,33 +98,17 @@ public class RecuperacionPasswordService {
         recuperaciones.invalidarPendientes(u.getId());
     }
 
-    private Usuario buscarPorTelefono(String telefono) {
-        String norm = AuthService.normPhone(telefono);
-        if (norm.isBlank()) {
-            throw new ApiException("Indica el teléfono de tu cuenta");
+    private Usuario buscarPorLogin(String login) {
+        String id = login == null ? "" : login.trim().toLowerCase();
+        if (id.isBlank()) {
+            throw new ApiException("Indica tu usuario");
         }
-        Usuario u = usuarios.findAllByTelefonoNorm(norm).stream()
+        Usuario u = usuarios.findByLoginIgnoreCase(id)
                 .filter(x -> Boolean.TRUE.equals(x.getActivo()))
-                .findFirst()
-                .orElseThrow(() -> new ApiException("No hay ninguna cuenta con ese teléfono"));
-        if (u.getTelefono() == null || u.getTelefono().isBlank()) {
-            throw new ApiException("Esta cuenta no tiene teléfono");
+                .orElseThrow(() -> new ApiException("No hay ninguna cuenta con ese usuario"));
+        if (u.getEmail() == null || u.getEmail().isBlank()) {
+            throw new ApiException("Esta cuenta no tiene email");
         }
         return u;
-    }
-
-    static String toE164(String telefono) {
-        String d = AuthService.normPhone(telefono).replaceAll("[^0-9+]", "");
-        if (d.startsWith("00")) {
-            d = "+" + d.substring(2);
-        }
-        if (!d.startsWith("+")) {
-            if (d.startsWith("34") && d.length() >= 11) {
-                d = "+" + d;
-            } else {
-                d = "+34" + d;
-            }
-        }
-        return d;
     }
 }
