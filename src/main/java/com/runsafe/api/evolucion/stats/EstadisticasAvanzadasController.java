@@ -64,7 +64,8 @@ public class EstadisticasAvanzadasController {
 
     private static List<Double> porDia(List<Actividad> list, LocalDateTime from, LocalDateTime to) {
         long days = Math.max(1, java.time.Duration.between(from, to).toDays());
-        int n = (int) Math.min(days, 31);
+        boolean anual = to.equals(from.plusYears(1));
+        int n = anual ? 12 : (int) days;
         List<Double> bins = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             bins.add(0d);
@@ -73,7 +74,9 @@ public class EstadisticasAvanzadasController {
             if (a.getFechaInicio() == null) {
                 continue;
             }
-            int idx = (int) java.time.Duration.between(from, a.getFechaInicio()).toDays();
+            int idx = anual
+                    ? a.getFechaInicio().getMonthValue() - 1
+                    : (int) java.time.temporal.ChronoUnit.DAYS.between(from.toLocalDate(), a.getFechaInicio().toLocalDate());
             if (idx >= 0 && idx < n) {
                 bins.set(idx, bins.get(idx) + nz(a.getDistanciaM()) / 1000.0);
             }

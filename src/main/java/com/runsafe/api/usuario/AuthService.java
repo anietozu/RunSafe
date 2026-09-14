@@ -75,19 +75,19 @@ public class AuthService {
     }
 
     @Transactional
-    public void actualizarPassword(RecuperarPasswordRequest req) {
-        var found = usuarios.findAllByTelefonoNorm(normPhone(req.telefono()));
-        if (found.isEmpty()) {
-            throw new ApiException("No hay ninguna cuenta con ese teléfono");
-        }
-        if (found.size() > 1) {
-            throw new ApiException("Hay varias cuentas con ese teléfono");
-        }
-        Usuario u = found.get(0);
+    public void actualizarPassword(Long userId, CambiarPasswordRequest req) {
+        Usuario u = usuarios.findById(userId)
+                .orElseThrow(() -> new ApiException("Cuenta no disponible"));
         if (!Boolean.TRUE.equals(u.getActivo())) {
             throw new ApiException("La cuenta no está activa");
         }
-        u.setPassword(encoder.encode(req.password()));
+        if (!encoder.matches(req.passwordActual(), u.getPassword())) {
+            throw new ApiException("La contraseña actual no es correcta");
+        }
+        if (req.passwordNueva().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            throw new ApiException("La contraseña nueva no puede superar 72 bytes UTF-8");
+        }
+        u.setPassword(encoder.encode(req.passwordNueva()));
         usuarios.save(u);
     }
 

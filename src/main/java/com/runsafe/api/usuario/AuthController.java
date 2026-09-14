@@ -41,10 +41,10 @@ public class AuthController {
         return authService.login(request);
     }
 
-    @PutMapping("/auth/password")
-    @Operation(summary = "Actualizar contraseña con el teléfono de la cuenta")
-    public Map<String, String> actualizarPassword(@Valid @RequestBody RecuperarPasswordRequest request) {
-        authService.actualizarPassword(request);
+    @PutMapping("/usuarios/me/password")
+    @Operation(summary = "Cambiar contraseña verificando la contraseña actual")
+    public Map<String, String> actualizarPassword(@Valid @RequestBody CambiarPasswordRequest request) {
+        authService.actualizarPassword(authUser.current().getId(), request);
         return Map.of("ok", "true");
     }
 
