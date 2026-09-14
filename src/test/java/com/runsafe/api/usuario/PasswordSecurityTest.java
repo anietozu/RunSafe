@@ -27,6 +27,7 @@ class PasswordSecurityTest {
     @MockBean UsuarioRepository usuarios;
     @MockBean JwtService jwt;
     @MockBean ConfiguracionSeguridadRepository configs;
+    @MockBean RecuperacionPasswordService recuperacion;
     Usuario user;
 
     @BeforeEach
@@ -105,6 +106,10 @@ class PasswordSecurityTest {
         mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest());
         mvc.perform(post("/api/auth/registro").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/auth/password/codigo").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/auth/password/restablecer").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/auth/anything")).andExpect(status().isUnauthorized());
     }

@@ -20,11 +20,18 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final RecuperacionPasswordService recuperacion;
     private final AuthUser authUser;
     private final UsuarioRepository usuarios;
 
-    public AuthController(AuthService authService, AuthUser authUser, UsuarioRepository usuarios) {
+    public AuthController(
+            AuthService authService,
+            RecuperacionPasswordService recuperacion,
+            AuthUser authUser,
+            UsuarioRepository usuarios
+    ) {
         this.authService = authService;
+        this.recuperacion = recuperacion;
         this.authUser = authUser;
         this.usuarios = usuarios;
     }
@@ -39,6 +46,20 @@ public class AuthController {
     @Operation(summary = "Iniciar sesión con usuario, email o teléfono")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    @PostMapping("/auth/password/codigo")
+    @Operation(summary = "Enviar código SMS para recuperar la contraseña")
+    public Map<String, String> pedirCodigo(@Valid @RequestBody PedirCodigoRequest request) {
+        recuperacion.pedirCodigo(request.telefono());
+        return Map.of("ok", "true");
+    }
+
+    @PostMapping("/auth/password/restablecer")
+    @Operation(summary = "Validar el código SMS y establecer una contraseña nueva")
+    public Map<String, String> restablecer(@Valid @RequestBody RestablecerPasswordRequest request) {
+        recuperacion.restablecer(request);
+        return Map.of("ok", "true");
     }
 
     @PutMapping("/usuarios/me/password")

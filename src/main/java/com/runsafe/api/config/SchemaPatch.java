@@ -111,6 +111,17 @@ public class SchemaPatch implements ApplicationRunner {
                     texto       VARCHAR(1000) NOT NULL,
                     fecha       TIMESTAMP(6) NOT NULL DEFAULT NOW()
                 )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS recuperacion_password (
+                    id          BIGSERIAL PRIMARY KEY,
+                    usuario_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    codigo_hash VARCHAR(60) NOT NULL,
+                    caduca      TIMESTAMP(6) NOT NULL,
+                    intentos    INTEGER NOT NULL DEFAULT 0,
+                    usada       BOOLEAN NOT NULL DEFAULT FALSE,
+                    fecha_alta  TIMESTAMP(6) NOT NULL DEFAULT NOW()
+                )
                 """
         };
         for (String sql : ddl) {
