@@ -9,7 +9,6 @@ import com.runsafe.api.usuario.Usuario;
 import com.runsafe.api.usuario.UsuarioRepository;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -193,27 +192,15 @@ public class SocialController {
         return Map.of("siguiendo", true);
     }
 
-    @DeleteMapping("/seguir/{userId}")
+    @PostMapping("/seguir/{userId}/dejar")
     @Transactional
     public Map<String, Boolean> dejarDeSeguir(@PathVariable Long userId) {
         return dejarSeguir(userId);
     }
 
-    @PostMapping("/seguir/{userId}/dejar")
-    @Transactional
-    public Map<String, Boolean> dejarDeSeguirPost(@PathVariable Long userId) {
-        return dejarSeguir(userId);
-    }
-
-    @DeleteMapping("/publicaciones/{id}")
-    @Transactional
-    public Map<String, Boolean> borrarPublicacion(@PathVariable Long id) {
-        return ocultarPublicacion(id);
-    }
-
     @PostMapping("/publicaciones/{id}/eliminar")
     @Transactional
-    public Map<String, Boolean> borrarPublicacionPost(@PathVariable Long id) {
+    public Map<String, Boolean> borrarPublicacion(@PathVariable Long id) {
         return ocultarPublicacion(id);
     }
 

@@ -9,7 +9,6 @@ import com.runsafe.api.social.PublicacionRepository;
 import com.runsafe.api.usuario.Usuario;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,12 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.DayOfWeek;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.temporal.TemporalAdjusters;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -68,12 +62,6 @@ public class ActividadController {
         return ActividadResponse.from(a, true);
     }
 
-    @DeleteMapping("/actividades/{id}")
-    @Transactional
-    public Map<String, Boolean> borrar(@PathVariable Long id) {
-        return eliminarActividad(id);
-    }
-
     @PostMapping("/actividades/{id}/eliminar")
     @Transactional
     public Map<String, Boolean> borrarPost(@PathVariable Long id) {
@@ -117,38 +105,6 @@ public class ActividadController {
             publicarRuta(u, saved);
         }
         return ActividadResponse.from(saved, true);
-    }
-
-    @GetMapping("/estadisticas")
-    @Transactional(readOnly = true)
-    public Map<String, Object> estadisticas() {
-        Long userId = authUser.current().getId();
-        LocalDateTime startWeek = LocalDate.now(ZoneId.of("Europe/Madrid"))
-                .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-                .atStartOfDay();
-        List<Actividad> semana = actividades.findByUsuarioIdAndFechaInicioGreaterThanEqual(userId, startWeek);
-        List<Actividad> todas = actividades.findByUsuarioIdOrderByFechaInicioDesc(userId);
-
-        double dist = semana.stream().mapToDouble(a -> nz(a.getDistanciaM())).sum();
-        int tiempo = semana.stream().mapToInt(a -> a.getDuracionS() == null ? 0 : a.getDuracionS()).sum();
-        int calorias = semana.stream().mapToInt(a -> a.getCalorias() == null ? 0 : a.getCalorias()).sum();
-        double vel = tiempo > 0 ? (dist / 1000.0) / (tiempo / 3600.0) : 0;
-
-        double[] porDia = new double[7];
-        for (Actividad a : semana) {
-            int idx = a.getFechaInicio().getDayOfWeek().getValue() - 1;
-            porDia[idx] += nz(a.getDistanciaM()) / 1000.0;
-        }
-
-        Map<String, Object> body = new HashMap<>();
-        body.put("distanciaM", dist);
-        body.put("duracionS", tiempo);
-        body.put("sesiones", semana.size());
-        body.put("velocidadMedia", vel);
-        body.put("calorias", calorias);
-        body.put("distanciaPorDiaKm", porDia);
-        body.put("totalHistorico", todas.size());
-        return body;
     }
 
     private Map<String, Boolean> eliminarActividad(Long id) {

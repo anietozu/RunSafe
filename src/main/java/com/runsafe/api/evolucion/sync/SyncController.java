@@ -3,7 +3,6 @@ package com.runsafe.api.evolucion.sync;
 import com.runsafe.api.evolucion.EvolucionStore;
 import com.runsafe.api.security.AuthUser;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,11 +21,6 @@ public class SyncController {
     public SyncController(EvolucionStore store, AuthUser authUser) {
         this.store = store;
         this.authUser = authUser;
-    }
-
-    @GetMapping("/estado")
-    public Map<String, Object> estado() {
-        return store.estadoSync(authUser.current().getId());
     }
 
     @PostMapping("/heartbeat")

@@ -4,7 +4,6 @@ import com.runsafe.api.common.ApiException;
 import com.runsafe.api.security.AuthUser;
 import com.runsafe.api.usuario.Usuario;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -101,21 +100,6 @@ public class SeguridadController {
     @PutMapping("/contactos-emergencia/{id}")
     public Map<String, Object> actualizarContacto(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return guardarContacto(id, body);
-    }
-
-    @PostMapping("/contactos-emergencia/{id}")
-    public Map<String, Object> actualizarContactoPost(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        return guardarContacto(id, body);
-    }
-
-    @DeleteMapping("/contactos-emergencia/{id}")
-    public Map<String, Boolean> borrar(@PathVariable Long id) {
-        ContactoEmergencia c = contactos.findById(id).orElseThrow(() -> new ApiException("Contacto no encontrado"));
-        if (!c.getUsuario().getId().equals(authUser.current().getId())) {
-            throw new ApiException("No autorizado");
-        }
-        contactos.delete(c);
-        return Map.of("ok", true);
     }
 
     private Map<String, Object> guardarContacto(Long id, Map<String, String> body) {

@@ -48,14 +48,15 @@ public class ComunidadController {
         return Map.of("ok", true);
     }
 
+    @PostMapping("/grupos/{id}/eliminar")
+    public Map<String, Boolean> borrarGrupo(@PathVariable Long id) {
+        store.borrarGrupo(authUser.current().getId(), id);
+        return Map.of("ok", true);
+    }
+
     @GetMapping("/grupos/{id}")
     public Map<String, Object> grupo(@PathVariable Long id) {
         return store.grupoDetalle(authUser.current().getId(), id);
-    }
-
-    @GetMapping("/grupos/{id}/miembros")
-    public List<Map<String, Object>> miembros(@PathVariable Long id) {
-        return store.miembrosGrupo(id);
     }
 
     @GetMapping("/grupos/{id}/mensajes")
@@ -90,9 +91,10 @@ public class ComunidadController {
         return Map.of("ok", true);
     }
 
-    @GetMapping("/retos/{id}/clasificacion")
-    public List<Map<String, Object>> clasificacionReto(@PathVariable Long id) {
-        return store.clasificacionReto(id);
+    @PostMapping("/retos/{id}/eliminar")
+    public Map<String, Boolean> borrarReto(@PathVariable Long id) {
+        store.borrarReto(authUser.current().getId(), id);
+        return Map.of("ok", true);
     }
 
     @GetMapping("/retos/{id}")
@@ -119,6 +121,12 @@ public class ComunidadController {
     @PostMapping("/eventos/{id}/salir")
     public Map<String, Boolean> salirEvento(@PathVariable Long id) {
         store.salirEvento(authUser.current().getId(), id);
+        return Map.of("ok", true);
+    }
+
+    @PostMapping("/eventos/{id}/eliminar")
+    public Map<String, Boolean> borrarEvento(@PathVariable Long id) {
+        store.borrarEvento(authUser.current().getId(), id);
         return Map.of("ok", true);
     }
 
