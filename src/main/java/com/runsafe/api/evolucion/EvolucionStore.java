@@ -145,6 +145,75 @@ public class EvolucionStore {
         jdbc.update("DELETE FROM grupo_miembros WHERE grupo_id = ? AND usuario_id = ?", grupoId, userId);
     }
 
+    public Map<String, Object> grupoDetalle(Long userId, Long grupoId) {
+        Map<String, Object> grupo = grupos(userId).stream()
+                .filter(g -> grupoId.equals(asLong(g.get("id"))))
+                .findFirst()
+                .orElseThrow(() -> new ApiException("Grupo no encontrado"));
+        grupo.put("integrantes", miembrosGrupo(grupoId));
+        return grupo;
+    }
+
+    public List<Map<String, Object>> miembrosGrupo(Long grupoId) {
+        requireGrupo(grupoId);
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                """
+                SELECT u.id, u.nombre, u.apellidos, u.login
+                FROM grupo_miembros m
+                JOIN usuarios u ON u.id = m.usuario_id
+                WHERE m.grupo_id = ?
+                ORDER BY m.fecha ASC
+                """,
+                grupoId);
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", row.get("id"));
+            m.put("nombre", row.get("nombre"));
+            m.put("apellidos", row.get("apellidos"));
+            m.put("login", row.get("login"));
+            out.add(m);
+        }
+        return out;
+    }
+
+    public List<Map<String, Object>> mensajesGrupo(Long userId, Long grupoId) {
+        requireMiembroGrupo(userId, grupoId);
+        return mensajes("grupo_mensajes", "grupo_id", grupoId, userId);
+    }
+
+    public Map<String, Object> enviarMensajeGrupo(Long userId, Long grupoId, Map<String, Object> body) {
+        requireMiembroGrupo(userId, grupoId);
+        return enviarMensaje("grupo_mensajes", "grupo_id", grupoId, userId, body);
+    }
+
+    public Map<String, Object> retoDetalle(Long userId, Long retoId) {
+        Map<String, Object> reto = retos(userId).stream()
+                .filter(r -> retoId.equals(asLong(r.get("id"))))
+                .findFirst()
+                .orElseThrow(() -> new ApiException("Reto no encontrado"));
+        reto.put("clasificacion", clasificacionReto(retoId));
+        return reto;
+    }
+
+    public Map<String, Object> eventoDetalle(Long userId, Long eventoId) {
+        Map<String, Object> evento = eventos(userId).stream()
+                .filter(e -> eventoId.equals(asLong(e.get("id"))))
+                .findFirst()
+                .orElseThrow(() -> new ApiException("Evento no encontrado"));
+        return evento;
+    }
+
+    public List<Map<String, Object>> mensajesEvento(Long userId, Long eventoId) {
+        requireParticipanteEvento(userId, eventoId);
+        return mensajes("evento_mensajes", "evento_id", eventoId, userId);
+    }
+
+    public Map<String, Object> enviarMensajeEvento(Long userId, Long eventoId, Map<String, Object> body) {
+        requireParticipanteEvento(userId, eventoId);
+        return enviarMensaje("evento_mensajes", "evento_id", eventoId, userId, body);
+    }
+
     public List<Map<String, Object>> retos(Long userId) {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 """
@@ -517,6 +586,66 @@ public class EvolucionStore {
         if (n == null || n == 0) {
             throw new ApiException("Grupo no encontrado");
         }
+    }
+
+    private void requireMiembroGrupo(Long userId, Long grupoId) {
+        requireGrupo(grupoId);
+        Integer n = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM grupo_miembros WHERE grupo_id = ? AND usuario_id = ?",
+                Integer.class, grupoId, userId);
+        if (n == null || n == 0) {
+            throw new ApiException("Únete al grupo para ver el chat");
+        }
+    }
+
+    private void requireParticipanteEvento(Long userId, Long eventoId) {
+        Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM eventos_grupo WHERE id = ?", Integer.class, eventoId);
+        if (n == null || n == 0) {
+            throw new ApiException("Evento no encontrado");
+        }
+        Integer p = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM eventos_participantes WHERE evento_id = ? AND usuario_id = ?",
+                Integer.class, eventoId, userId);
+        if (p == null || p == 0) {
+            throw new ApiException("Apúntate al evento para comentar");
+        }
+    }
+
+    private List<Map<String, Object>> mensajes(String table, String fk, Long ownerId, Long userId) {
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT m.id, m.texto, m.fecha, u.id AS usuario_id, u.nombre, u.login FROM "
+                        + table + " m JOIN usuarios u ON u.id = m.usuario_id WHERE m." + fk + " = ? ORDER BY m.fecha ASC",
+                ownerId);
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", row.get("id"));
+            m.put("texto", row.get("texto"));
+            m.put("fecha", row.get("fecha"));
+            m.put("usuarioId", row.get("usuario_id"));
+            m.put("nombre", row.get("nombre"));
+            m.put("login", row.get("login"));
+            m.put("esMio", userId.equals(asLong(row.get("usuario_id"))));
+            out.add(m);
+        }
+        return out;
+    }
+
+    private Map<String, Object> enviarMensaje(String table, String fk, Long ownerId, Long userId, Map<String, Object> body) {
+        String texto = str(body.get("texto"), "").trim();
+        if (texto.isEmpty()) {
+            throw new ApiException("Escribe un mensaje");
+        }
+        if (texto.length() > 1000) {
+            texto = texto.substring(0, 1000);
+        }
+        Long id = jdbc.queryForObject(
+                "INSERT INTO " + table + " (" + fk + ", usuario_id, texto) VALUES (?, ?, ?) RETURNING id",
+                Long.class, ownerId, userId, texto);
+        return mensajes(table, fk, ownerId, userId).stream()
+                .filter(m -> id.equals(asLong(m.get("id"))))
+                .findFirst()
+                .orElseGet(() -> Map.of("id", id, "texto", texto));
     }
 
     private Map<String, Object> objetivoDto(Map<String, Object> row) {

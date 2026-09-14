@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -49,6 +48,26 @@ public class ComunidadController {
         return Map.of("ok", true);
     }
 
+    @GetMapping("/grupos/{id}")
+    public Map<String, Object> grupo(@PathVariable Long id) {
+        return store.grupoDetalle(authUser.current().getId(), id);
+    }
+
+    @GetMapping("/grupos/{id}/miembros")
+    public List<Map<String, Object>> miembros(@PathVariable Long id) {
+        return store.miembrosGrupo(id);
+    }
+
+    @GetMapping("/grupos/{id}/mensajes")
+    public List<Map<String, Object>> mensajesGrupo(@PathVariable Long id) {
+        return store.mensajesGrupo(authUser.current().getId(), id);
+    }
+
+    @PostMapping("/grupos/{id}/mensajes")
+    public Map<String, Object> enviarMensajeGrupo(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        return store.enviarMensajeGrupo(authUser.current().getId(), id, body);
+    }
+
     @GetMapping("/retos")
     public List<Map<String, Object>> retos() {
         return store.retos(authUser.current().getId());
@@ -76,6 +95,11 @@ public class ComunidadController {
         return store.clasificacionReto(id);
     }
 
+    @GetMapping("/retos/{id}")
+    public Map<String, Object> reto(@PathVariable Long id) {
+        return store.retoDetalle(authUser.current().getId(), id);
+    }
+
     @GetMapping("/eventos")
     public List<Map<String, Object>> eventos() {
         return store.eventos(authUser.current().getId());
@@ -98,8 +122,18 @@ public class ComunidadController {
         return Map.of("ok", true);
     }
 
-    @GetMapping("/social/ranking")
-    public List<Map<String, Object>> ranking(@RequestParam(defaultValue = "semana") String periodo) {
-        return store.ranking(periodo);
+    @GetMapping("/eventos/{id}")
+    public Map<String, Object> evento(@PathVariable Long id) {
+        return store.eventoDetalle(authUser.current().getId(), id);
+    }
+
+    @GetMapping("/eventos/{id}/mensajes")
+    public List<Map<String, Object>> mensajesEvento(@PathVariable Long id) {
+        return store.mensajesEvento(authUser.current().getId(), id);
+    }
+
+    @PostMapping("/eventos/{id}/mensajes")
+    public Map<String, Object> enviarMensajeEvento(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        return store.enviarMensajeEvento(authUser.current().getId(), id, body);
     }
 }

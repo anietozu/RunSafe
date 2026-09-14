@@ -126,6 +126,24 @@ public class SchemaPatch implements ApplicationRunner {
                     usuario_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
                     PRIMARY KEY (evento_id, usuario_id)
                 )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS grupo_mensajes (
+                    id          BIGSERIAL PRIMARY KEY,
+                    grupo_id    BIGINT NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+                    usuario_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    texto       VARCHAR(1000) NOT NULL,
+                    fecha       TIMESTAMP(6) NOT NULL DEFAULT NOW()
+                )
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS evento_mensajes (
+                    id          BIGSERIAL PRIMARY KEY,
+                    evento_id   BIGINT NOT NULL REFERENCES eventos_grupo(id) ON DELETE CASCADE,
+                    usuario_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    texto       VARCHAR(1000) NOT NULL,
+                    fecha       TIMESTAMP(6) NOT NULL DEFAULT NOW()
+                )
                 """
         };
         for (String sql : ddl) {
